@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 'use strict';
 const updateNotifier = require('update-notifier');
 const subarg = require('subarg');
@@ -10,6 +11,7 @@ const arrify = require('arrify');
 const Pageres = require('pageres');
 const parseHeaders = require('parse-headers');
 const meow = require('meow');
+const fs = require('fs');
 
 const options = {
 	boolean: [
@@ -19,7 +21,8 @@ const options = {
 	],
 	default: {
 		delay: 0,
-		scale: 1
+		scale: 1,
+		dir: process.cwd(),
 	},
 	alias: {
 		v: 'verbose',
@@ -65,8 +68,20 @@ const cli = meow(`
 `, options);
 
 function generate(args, options) {
-	const pageres = new Pageres({incrementalName: !options.overwrite})
-		.dest(process.cwd());
+
+
+
+	try {
+		if (fs.lstatSync(options.dir).isDirectory() === false) {}
+	} catch (err) {
+
+		fs.mkdir(options.dir, 0o666);
+	}
+
+	const pageres = new Pageres({
+			incrementalName: !options.overwrite
+		})
+		.dest(options.dir);
 
 	args.forEach(arg => {
 		pageres.src(arg.url, arg.sizes, arg.options);
@@ -170,7 +185,9 @@ function init(args, options) {
 	args = args.filter(x => x._);
 
 	if (nonGroupedArgs.length > 0) {
-		args.push({_: nonGroupedArgs});
+		args.push({
+			_: nonGroupedArgs
+		});
 	}
 
 	const parsedArgs = parse(args, options);
@@ -180,6 +197,8 @@ function init(args, options) {
 }
 
 sudoBlock();
-updateNotifier({pkg: cli.pkg}).notify();
+updateNotifier({
+	pkg: cli.pkg
+}).notify();
 
 init(subarg(cli.input, options)._, cli.flags);
